@@ -3,7 +3,7 @@ import requests
 import socket
 import json
 import logging
-from ShineCraftInternship.agent.scan_engine import run_full_scan
+from agent.scan_engine import run_full_scan
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')

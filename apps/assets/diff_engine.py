@@ -1,4 +1,4 @@
-from ShineCraftInternship.apps.notifications.models import ChangeNotification
+from apps.notifications.models import ChangeNotification
 
 def detect_changes(asset, old_data, new_data):
     """

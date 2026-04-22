@@ -8,7 +8,7 @@ class DashboardConfig(AppConfig):
     def ready(self):
         """Initialize the auto-scan scheduler when Django starts"""
         try:
-            from ShineCraftInternship.agent.scheduler import start_scheduler
+            from agent.scheduler import start_scheduler
             start_scheduler()
         except Exception as e:
             print(f"[Dashboard] Failed to start scheduler: {str(e)}")

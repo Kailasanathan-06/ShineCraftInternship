@@ -1,5 +1,5 @@
 from django.db import models
-from ShineCraftInternship.apps.assets.models import Asset
+from apps.assets.models import Asset
 
 class ChangeNotification(models.Model):
     asset = models.ForeignKey(Asset, on_delete=models.CASCADE)

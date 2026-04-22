@@ -1,5 +1,5 @@
 from django.shortcuts import render
-from ShineCraftInternship.apps.assets.models import Asset
+from apps.assets.models import Asset
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.views.decorators.csrf import csrf_exempt
@@ -8,7 +8,7 @@ from django.http import JsonResponse
 import json
 
 
-from ShineCraftInternship.apps.notifications.models import ChangeNotification
+from apps.notifications.models import ChangeNotification
 
 def dashboard_home(request):
     all_assets = Asset.objects.all()

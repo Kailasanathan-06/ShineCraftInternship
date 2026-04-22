@@ -5,8 +5,8 @@ import threading
 import time
 from datetime import datetime, timedelta
 from django.core.cache import cache
-from ShineCraftInternship.apps.assets.models import Asset, ScanResult
-from ShineCraftInternship.apps.assets.scanner_adapter import execute_scan
+from apps.assets.models import Asset, ScanResult
+from apps.assets.scanner_adapter import execute_scan
 
 
 class AutoScanScheduler:
