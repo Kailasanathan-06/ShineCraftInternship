@@ -1,0 +1,66 @@
+{% extends 'base.html' %} {% load scan_tags %} {% block content %}
+<div class="detail-header">
+  <div>
+    <h1>{{ asset.hostname }}</h1>
+    <p class="subtitle">
+      {{ asset.model }} • {{ asset.manufacturer }} • {{ asset.assigned_user }}
+    </p>
+  </div>
+  <div class="detail-badges">
+    <span class="status-badge">Service Tag: {{ asset.service_tag }}</span>
+    <span class="status-badge" style="background: {% if asset.is_online %}#d4edda; color: #155724;{% else %}#f8d7da; color: #721c24;{% endif %}">
+        {% if asset.is_online %}Online{% else %}Offline{% endif %}
+    </span>
+    {% if asset.scan_requested %}
+    <span class="status-badge" style="background: #fff3cd; color: #856404;">Scan Queued...</span>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid-box">
+  <div class="info-box">
+    <strong>Model</strong>
+    <span>{{ asset.model }}</span>
+  </div>
+  <div class="info-box">
+    <strong>Manufacturer</strong>
+    <span>{{ asset.manufacturer }}</span>
+  </div>
+  <div class="info-box">
+    <strong>User</strong>
+    <span>{{ asset.assigned_user }}</span>
+  </div>
+  <div class="info-box">
+    <strong>Service Tag</strong>
+    <span>{{ asset.service_tag }}</span>
+  </div>
+</div>
+
+<h4 class="section-title">Scan History</h4>
+{% if scans %} 
+  <div class="scan-timeline">
+    {% for scan in scans %}
+    <div class="scan-entry" style="margin-bottom: 30px; border: 1px solid #eaeaea; border-radius: 8px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
+      <div class="scan-header" style="background: #f8f9fa; padding: 16px 20px; border-bottom: 1px solid #eaeaea; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <h5 style="margin: 0; font-size: 1.1rem; color: #2c3e50; font-weight: 600;">
+          &#128197; Scan on {{ scan.created_at|date:"F j, Y" }}
+        </h5>
+        <span style="background: #e9ecef; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; color: #495057; font-weight: 500;">
+          &#8986; {{ scan.created_at|time:"H:i:s" }}
+        </span>
+      </div>
+      
+      <div class="section-grid" style="padding: 20px;">
+        {% for section_key, section_value in scan.raw_output.items %}
+        <div class="section-card">
+          <div class="section-header">{{ section_key|humanize_key }}</div>
+          <div class="section-body">{{ section_value|render_nested_html }}</div>
+        </div>
+        {% endfor %}
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+{% else %}
+  <p style="padding: 20px; background: #f8f9fa; border-radius: 6px; text-align: center; color: #666;">No scan data available for this system yet.</p>
+{% endif %} {% endblock %}
