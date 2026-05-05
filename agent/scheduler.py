@@ -20,19 +20,36 @@ class AutoScanScheduler:
     def get_next_scan_time(self, interval, scan_time):
         """Calculate next scan time based on interval and time"""
         now = datetime.now()
-        hour, minute = map(int, scan_time.split(':'))
         
-        target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+        try:
+            hour, minute = map(int, scan_time.split(':'))
+        except (ValueError, AttributeError):
+            # Default to 02:00 if parsing fails
+            hour, minute = 2, 0
         
         if interval == 'hourly':
+            # For hourly: next scan is at MM:SS of next hour
+            target_time = now.replace(minute=minute, second=0, microsecond=0)
             if target_time <= now:
                 target_time += timedelta(hours=1)
+        
         elif interval == 'daily':
+            # For daily: scan at HH:MM on next day
+            target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
             if target_time <= now:
                 target_time += timedelta(days=1)
+        
         elif interval == 'weekly':
+            # For weekly: scan at HH:MM on next week
+            target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
             if target_time <= now:
                 target_time += timedelta(weeks=1)
+        
+        else:
+            # Unknown interval, default to daily
+            target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            if target_time <= now:
+                target_time += timedelta(days=1)
         
         return target_time
     
@@ -42,7 +59,15 @@ class AutoScanScheduler:
             print(f"[{datetime.now()}] Starting automatic scan...")
             data = execute_scan()
             
-            comp = data["Asset Details"]["ComputerDetails"]["Computer system"]
+            # Extract computer details from the correct structure
+            # get_computer_return_data() returns structure with "Computer system" at root level
+            comp = data.get("Computer system", {})
+            if not comp or not comp.get("Name"):
+                # Fallback to nested structure if present
+                comp = data.get("Asset Details", {}).get("ComputerDetails", {}).get("Computer system", {})
+            
+            if not comp.get("Name"):
+                raise ValueError("Could not extract hostname from scan data")
             
             asset, created = Asset.objects.update_or_create(
                 hostname=comp["Name"],

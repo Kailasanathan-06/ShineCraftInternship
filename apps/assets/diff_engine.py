@@ -10,23 +10,23 @@ def detect_changes(asset, old_data, new_data):
     
     # 1. Compare Memory
     try:
-        old_mem = old_data.get("Asset Details", {}).get("ComputerDetails", {}).get("Hardware", {}).get("Memory", "Unknown")
-        new_mem = new_data.get("Asset Details", {}).get("ComputerDetails", {}).get("Hardware", {}).get("Memory", "Unknown")
+        old_mem = old_data.get("RAM Details", {}).get("capacity_gb", "Unknown")
+        new_mem = new_data.get("RAM Details", {}).get("capacity_gb", "Unknown")
         
         if str(old_mem) != str(new_mem) and new_mem != "Unknown":
             ChangeNotification.objects.create(
                 asset=asset,
                 field_name="Memory",
-                old_value=str(old_mem),
-                new_value=str(new_mem)
+                old_value=f"{old_mem} GB",
+                new_value=f"{new_mem} GB"
             )
     except Exception as e:
         print(f"Diff error Memory: {e}")
 
     # 2. Compare Software Additions/Removals
     try:
-        old_soft_list = old_data.get("Asset Details", {}).get("Software", [])
-        new_soft_list = new_data.get("Asset Details", {}).get("Software", [])
+        old_soft_list = old_data.get("installed_software_list", [])
+        new_soft_list = new_data.get("installed_software_list", [])
         
         if isinstance(old_soft_list, list) and isinstance(new_soft_list, list):
             old_set = {f"{s.get('Name', 'Unknown')} {s.get('Version', '')}".strip() for s in old_soft_list if isinstance(s, dict)}
@@ -54,8 +54,8 @@ def detect_changes(asset, old_data, new_data):
 
     # 3. Compare Processors
     try:
-        old_cpu = old_data.get("Asset Details", {}).get("ComputerDetails", {}).get("Hardware", {}).get("Processors", {}).get("Name", "Unknown")
-        new_cpu = new_data.get("Asset Details", {}).get("ComputerDetails", {}).get("Hardware", {}).get("Processors", {}).get("Name", "Unknown")
+        old_cpu = old_data.get("processor", {}).get("Model", "Unknown")
+        new_cpu = new_data.get("processor", {}).get("Model", "Unknown")
         
         if str(old_cpu) != str(new_cpu) and new_cpu != "Unknown":
             ChangeNotification.objects.create(

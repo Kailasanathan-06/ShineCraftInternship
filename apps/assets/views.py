@@ -65,15 +65,20 @@ def agent_checkin(request, hostname):
     asset.save()
     return Response({"action": action})
 
-@api_view(['POST'])
-def agent_upload(request):
+def process_scan_results(data):
     """
-    Client agent posts the JSON scan payload here.
+    Core logic to process and store scan data.
+    Returns the asset object and hostname.
     """
-    data = request.data
-    asset_details = data.get("Asset Details", {})
-    comp_details = asset_details.get("ComputerDetails", {}) if isinstance(asset_details, dict) else {}
-    comp = comp_details.get("Computer system", {}) if isinstance(comp_details, dict) else {}
+    # Extract hostname from the correct structure
+    # Try root level first
+    comp = data.get("Computer system", {})
+    if not comp or not comp.get("Name"):
+        # Fallback to nested structure
+        asset_details = data.get("Asset Details", {})
+        comp_details = asset_details.get("ComputerDetails", {}) if isinstance(asset_details, dict) else {}
+        comp = comp_details.get("Computer system", {}) if isinstance(comp_details, dict) else {}
+    
     hostname = comp.get("Name", "Unknown") if isinstance(comp, dict) else "Unknown"
 
     asset, created = Asset.objects.get_or_create(hostname=hostname)
@@ -81,7 +86,7 @@ def agent_upload(request):
     # Get previous scan data to compare
     previous_scan = ScanResult.objects.filter(asset=asset).order_by("-created_at").first()
     
-    # Save new details
+    # Save asset details (extract from both possible structures)
     asset.service_tag = comp.get("service tag") if isinstance(comp, dict) else None
     asset.manufacturer = comp.get("manufacturer", "") if isinstance(comp, dict) else ""
     asset.model = comp.get("model", "") if isinstance(comp, dict) else ""
@@ -90,26 +95,49 @@ def agent_upload(request):
     asset.scan_requested = False  # clear the flag since it's done
     asset.save()
 
-    # Create new scan result
+    # Create new scan result with full data
     new_scan = ScanResult.objects.create(asset=asset, raw_output=data)
 
     # Trigger change detection
     if previous_scan:
         detect_changes(asset, previous_scan.raw_output, data)
+        
+    return asset, hostname
 
-    return Response({"status": "success", "message": f"Scan received for {hostname}"})
+@api_view(['POST'])
+def agent_upload(request):
+    """
+    Client agent posts the JSON scan payload here.
+    """
+    data = request.data
+    asset, hostname = process_scan_results(data)
+    return Response({"status": "success", "message": f"Scan received and stored for {hostname}"})
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ManualScanAPIView(APIView):
     def post(self, request):
-        # We no longer run it locally. We just queue the task for the remote agent.
         hostname = request.data.get("hostname")
+        
+        # If no hostname is provided, we assume it's a dashboard request to scan the server machine
         if not hostname:
-            Asset.objects.all().update(scan_requested=True)
-            return Response({
-                "message": "Manual scan triggered! All online agents will begin scanning immediately.",
-                "hostname": "All"
-            })
+            from .scanner_adapter import execute_scan
+            try:
+                # Perform immediate local scan
+                data = execute_scan()
+                asset, scanned_hostname = process_scan_results(data)
+                
+                return Response({
+                    "message": "Manual scan completed successfully.",
+                    "hostname": scanned_hostname,
+                    "asset_id": asset.id
+                })
+            except Exception as e:
+                # Fallback to queuing for all agents if local scan fails
+                Asset.objects.all().update(scan_requested=True)
+                return Response({
+                    "message": f"Local scan failed ({str(e)}). Queued scan for all remote agents instead.",
+                    "hostname": "All"
+                })
             
         try:
             asset = Asset.objects.get(hostname=hostname)

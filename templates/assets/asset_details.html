@@ -1,4 +1,12 @@
 {% extends 'base.html' %} {% load scan_tags %} {% block content %}
+<style>
+  .badge-online { background: #d4edda; color: #155724; }
+  .badge-offline { background: #f8d7da; color: #721c24; }
+  .accordion-icon { transition: transform 0.3s; font-size: 0.9rem; color: #64748b; transform: rotate(0deg); }
+  .accordion-icon.icon-expanded { transform: rotate(180deg); }
+  .accordion-content { padding: 24px; background: #fff; border-top: 1px solid #e2e8f0; display: none; }
+  .accordion-content.content-expanded { display: block; }
+</style>
 <div class="detail-header">
   <div>
     <h1>{{ asset.hostname }}</h1>
@@ -8,7 +16,7 @@
   </div>
   <div class="detail-badges">
     <span class="status-badge">Service Tag: {{ asset.service_tag }}</span>
-    <span class="status-badge" style="background: {% if asset.is_online %}#d4edda; color: #155724;{% else %}#f8d7da; color: #721c24;{% endif %}">
+    <span class="status-badge {% if asset.is_online %}badge-online{% else %}badge-offline{% endif %}">
         {% if asset.is_online %}Online{% else %}Offline{% endif %}
     </span>
     {% if asset.scan_requested %}
@@ -40,27 +48,99 @@
 {% if scans %} 
   <div class="scan-timeline">
     {% for scan in scans %}
-    <div class="scan-entry" style="margin-bottom: 30px; border: 1px solid #eaeaea; border-radius: 8px; background: #fff; box-shadow: 0 2px 8px rgba(0,0,0,0.04);">
-      <div class="scan-header" style="background: #f8f9fa; padding: 16px 20px; border-bottom: 1px solid #eaeaea; border-radius: 8px 8px 0 0; display: flex; justify-content: space-between; align-items: center;">
-        <h5 style="margin: 0; font-size: 1.1rem; color: #2c3e50; font-weight: 600;">
-          &#128197; Scan on {{ scan.created_at|date:"F j, Y" }}
+    <div class="scan-entry" style="margin-bottom: 40px; border: 1px solid #e2e8f0; border-radius: 12px; background: #fff; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+      <div class="scan-header" style="background: #f8fafc; padding: 16px 24px; border-bottom: 1px solid #e2e8f0; border-radius: 12px 12px 0 0; display: flex; justify-content: space-between; align-items: center;">
+        <h5 style="margin: 0; font-size: 1.1rem; color: #1e293b; font-weight: 700;">
+          <span style="margin-right: 8px;">📊</span> Scan Result - {{ scan.created_at|date:"M d, Y" }}
         </h5>
-        <span style="background: #e9ecef; padding: 4px 10px; border-radius: 12px; font-size: 0.85rem; color: #495057; font-weight: 500;">
-          &#8986; {{ scan.created_at|time:"H:i:s" }}
-        </span>
+        <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="background: #eef2ff; padding: 6px 12px; border-radius: 20px; font-size: 0.85rem; color: #4f46e5; font-weight: 600; border: 1px solid #e0e7ff;">
+              🕒 {{ scan.created_at|time:"H:i" }}
+            </span>
+        </div>
       </div>
       
-      <div class="section-grid" style="padding: 20px;">
+      <div class="accordion-container" id="scan-accordion-{{ scan.id }}">
         {% for section_key, section_value in scan.raw_output.items %}
-        <div class="section-card">
-          <div class="section-header">{{ section_key|humanize_key }}</div>
-          <div class="section-body">{{ section_value|render_nested_html }}</div>
+        <div class="accordion-item" style="margin-bottom: 10px; border: 1px solid #e2e8f0; border-radius: 8px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+          <button class="accordion-header {% if forloop.first %}active{% endif %}" 
+                  onclick="toggleAccordion(this)"
+                  style="width: 100%; text-align: left; padding: 16px 20px; background: #f8fafc; border: none; cursor: pointer; display: flex; justify-content: space-between; align-items: center; font-weight: 600; color: #1e293b; font-size: 1.05rem; transition: background 0.2s;">
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 1.2rem;">
+                {% if 'system' in section_key|lower %}💻
+                {% elif 'processor' in section_key|lower %}🧠
+                {% elif 'bios' in section_key|lower %}📟
+                {% elif 'memory' in section_key|lower %}💾
+                {% elif 'disk' in section_key|lower %}💽
+                {% elif 'network' in section_key|lower %}🌐
+                {% elif 'software' in section_key|lower %}💿
+                {% elif 'os' in section_key|lower or 'operating' in section_key|lower %}🖥️
+                {% else %}📋{% endif %}
+              </span>
+              {{ section_key|humanize_key }}
+            </div>
+            <span class="accordion-icon {% if forloop.first %}icon-expanded{% endif %}">▼</span>
+          </button>
+          
+          <div class="accordion-content {% if forloop.first %}content-expanded{% endif %}">
+            <div class="section-body">
+              {{ section_value|render_nested_html }}
+            </div>
+          </div>
         </div>
         {% endfor %}
       </div>
     </div>
     {% endfor %}
   </div>
+
+  <script>
+    function toggleAccordion(btn) {
+      const content = btn.nextElementSibling;
+      const icon = btn.querySelector('.accordion-icon');
+      const isExpanded = content.classList.contains('content-expanded');
+      const container = btn.closest('.accordion-container');
+
+      // Close all other accordions in the same container
+      container.querySelectorAll('.accordion-content').forEach(c => {
+          if (c !== content) {
+              c.classList.remove('content-expanded');
+          }
+      });
+      container.querySelectorAll('.accordion-icon').forEach(i => {
+          if (i !== icon) {
+              i.classList.remove('icon-expanded');
+          }
+      });
+      container.querySelectorAll('.accordion-header').forEach(h => {
+          if (h !== btn) {
+              h.style.background = '#f8fafc';
+              h.classList.remove('active');
+          }
+      });
+
+      // Toggle current accordion
+      if (isExpanded) {
+        content.classList.remove('content-expanded');
+        icon.classList.remove('icon-expanded');
+        btn.style.background = '#f8fafc';
+        btn.classList.remove('active');
+      } else {
+        content.classList.add('content-expanded');
+        icon.classList.add('icon-expanded');
+        btn.style.background = '#eef2ff';
+        btn.classList.add('active');
+      }
+    }
+    
+    // Set initial background for active headers
+    document.addEventListener('DOMContentLoaded', () => {
+      document.querySelectorAll('.accordion-header.active').forEach(h => {
+        h.style.background = '#eef2ff';
+      });
+    });
+  </script>
 {% else %}
   <p style="padding: 20px; background: #f8f9fa; border-radius: 6px; text-align: center; color: #666;">No scan data available for this system yet.</p>
 {% endif %} {% endblock %}

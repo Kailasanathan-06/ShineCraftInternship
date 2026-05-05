@@ -615,7 +615,6 @@
     })
       .then((res) => res.json())
       .then((data) => {
-        setTimeout(() => {
             clearInterval(progressInterval);
             clearInterval(scanTimer);
 
@@ -626,7 +625,7 @@
             const itemsList = document.getElementById("itemsList");
             const finalItem = document.createElement("div");
             finalItem.className = "scanning-item completed";
-            finalItem.innerHTML = `<span class="scanning-item-icon"></span><span>Scan request delivered. Agents engaged.</span>`;
+            finalItem.innerHTML = `<span class="scanning-item-icon"></span><span>${data.message}</span>`;
             itemsList.appendChild(finalItem);
 
             document.getElementById("progressPercent").textContent = "100%";
@@ -637,9 +636,16 @@
             setTimeout(() => {
               loadingContainer.style.display = "none";
               statusDiv.style.display = "block";
-              statusDiv.innerHTML = `<div class="scan-status-box status-success">✓ ${data.message}</div>`;
-            }, 2500);
-        }, scanPaths.length * 500);
+              
+              if (data.asset_id) {
+                statusDiv.innerHTML = `<div class="scan-status-box status-success">✓ Scan completed successfully! Redirecting to asset page...</div>`;
+                setTimeout(() => {
+                  window.location.href = "/assets/" + data.asset_id + "/";
+                }, 1500);
+              } else {
+                statusDiv.innerHTML = `<div class="scan-status-box status-success">✓ ${data.message}</div>`;
+              }
+            }, 1000);
       })
       .catch((err) => {
         clearInterval(progressInterval);
