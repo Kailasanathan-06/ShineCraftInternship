@@ -32,13 +32,15 @@ class ScheduleAutoScanAPIView(APIView):
             data = json.loads(request.body)
             interval = data.get('interval', 'daily')  # daily, weekly, hourly
             time = data.get('time', '02:00')  # time in HH:MM format
+            day_of_week = data.get('day_of_week', '0') # 0-6 for Mon-Sun
             
             # Store the schedule configuration
             from django.core.cache import cache
             cache.set('auto_scan_config', {
                 'enabled': True,
                 'interval': interval,
-                'time': time
+                'time': time,
+                'day_of_week': int(day_of_week)
             }, None)  # Store indefinitely
             
             return Response({

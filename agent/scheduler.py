@@ -17,8 +17,8 @@ class AutoScanScheduler:
         self.thread = None
         self.next_scan_time = None
     
-    def get_next_scan_time(self, interval, scan_time):
-        """Calculate next scan time based on interval and time"""
+    def get_next_scan_time(self, interval, scan_time, day_of_week=0):
+        """Calculate next scan time based on interval, time and day of week"""
         now = datetime.now()
         
         try:
@@ -40,8 +40,17 @@ class AutoScanScheduler:
                 target_time += timedelta(days=1)
         
         elif interval == 'weekly':
-            # For weekly: scan at HH:MM on next week
-            target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0)
+            # For weekly: scan at HH:MM on specific day of week (0=Mon, 6=Sun)
+            target_day = int(day_of_week)
+            current_day = now.weekday()
+            
+            days_ahead = target_day - current_day
+            if days_ahead < 0:
+                days_ahead += 7
+            
+            target_time = now.replace(hour=hour, minute=minute, second=0, microsecond=0) + timedelta(days=days_ahead)
+            
+            # If target_time is in the past (e.g. today but earlier time), move to next week
             if target_time <= now:
                 target_time += timedelta(weeks=1)
         
@@ -110,15 +119,18 @@ class AutoScanScheduler:
             now = datetime.now()
             interval = config.get('interval', 'daily')
             scan_time = config.get('time', '02:00')
+            day_of_week = config.get('day_of_week', 0)
             
             # Calculate next scan time
-            if self.next_scan_time is None or now >= self.next_scan_time:
-                self.next_scan_time = self.get_next_scan_time(interval, scan_time)
+            if self.next_scan_time is None or now >= self.next_scan_time + timedelta(minutes=1):
+                # Reset next_scan_time if it's too old or not set
+                self.next_scan_time = self.get_next_scan_time(interval, scan_time, day_of_week)
             
             # Check if it's time to scan (within 1-minute window)
             if now >= self.next_scan_time and now < (self.next_scan_time + timedelta(minutes=1)):
                 self.execute_scan()
-                self.next_scan_time = self.get_next_scan_time(interval, scan_time)
+                # Update next_scan_time for the next cycle
+                self.next_scan_time = self.get_next_scan_time(interval, scan_time, day_of_week)
             
             time.sleep(30)  # Check every 30 seconds
     

@@ -125,11 +125,29 @@
             id="scanInterval"
             name="interval"
             required
+            onchange="toggleDayOfWeek()"
             style="width: 100%; padding: 10px; margin-bottom: 15px"
           >
             <option value="hourly">Hourly</option>
             <option value="daily" selected>Daily</option>
             <option value="weekly">Weekly</option>
+          </select>
+        </div>
+
+        <div id="dayOfWeekGroup" class="form-group" style="display: none">
+          <label for="scanDay">Day of Week:</label>
+          <select
+            id="scanDay"
+            name="day_of_week"
+            style="width: 100%; padding: 10px; margin-bottom: 15px"
+          >
+            <option value="0">Monday</option>
+            <option value="1">Tuesday</option>
+            <option value="2">Wednesday</option>
+            <option value="3">Thursday</option>
+            <option value="4">Friday</option>
+            <option value="5">Saturday</option>
+            <option value="6">Sunday</option>
           </select>
         </div>
 
@@ -657,6 +675,12 @@
   }
 
 
+  function toggleDayOfWeek() {
+    const interval = document.getElementById("scanInterval").value;
+    const dayGroup = document.getElementById("dayOfWeekGroup");
+    dayGroup.style.display = interval === "weekly" ? "block" : "none";
+  }
+
   function openAutoScanModal() {
     // Fetch current schedule first
     fetch("/dashboard/api/schedule-scan/")
@@ -666,6 +690,10 @@
           document.getElementById("scanInterval").value =
             data.interval || "daily";
           document.getElementById("scanTime").value = data.time || "02:00";
+          if (data.day_of_week !== undefined) {
+            document.getElementById("scanDay").value = data.day_of_week;
+          }
+          toggleDayOfWeek();
         }
         document.getElementById("autoScanModal").style.display = "block";
       })
@@ -681,6 +709,7 @@
   function scheduleAutoScan() {
     const interval = document.getElementById("scanInterval").value;
     const time = document.getElementById("scanTime").value;
+    const dayOfWeek = document.getElementById("scanDay").value;
     const notifications = document.getElementById(
       "enableNotifications",
     ).checked;
@@ -698,6 +727,7 @@
       body: JSON.stringify({
         interval: interval,
         time: time,
+        day_of_week: dayOfWeek,
         notifications: notifications,
       }),
     })
